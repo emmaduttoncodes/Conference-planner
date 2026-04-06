@@ -6,6 +6,24 @@ interface CacheEntry<T> {
   fetchedAt: number;
 }
 
+// ai.engineer blocks CORS for non-whitelisted origins; route through a proxy as fallback
+const CORS_PROXY = "https://corsproxy.io/?";
+
+async function fetchJson<T>(url: string): Promise<T> {
+  // Try direct first (works if CORS headers are present)
+  try {
+    const res = await fetch(url, { mode: "cors" });
+    if (res.ok) return res.json() as Promise<T>;
+  } catch {
+    // CORS or network error — fall through to proxy
+  }
+
+  // Fallback: CORS proxy
+  const res = await fetch(`${CORS_PROXY}${encodeURIComponent(url)}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
+  return res.json() as Promise<T>;
+}
+
 async function fetchWithCache<T>(url: string, cacheKey: string): Promise<T> {
   const cached = localStorage.getItem(cacheKey);
   if (cached) {
@@ -19,9 +37,7 @@ async function fetchWithCache<T>(url: string, cacheKey: string): Promise<T> {
     }
   }
 
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
-  const data = (await res.json()) as T;
+  const data = await fetchJson<T>(url);
   try {
     localStorage.setItem(cacheKey, JSON.stringify({ data, fetchedAt: Date.now() }));
   } catch {
