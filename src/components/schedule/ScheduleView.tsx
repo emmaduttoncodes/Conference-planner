@@ -1,4 +1,5 @@
 import type { Talk, SpeakerMap } from "../../types";
+import { DAYS } from "../../constants";
 import { TimeSlotGroup } from "./TimeSlotGroup";
 
 interface ScheduleViewProps {
@@ -6,10 +7,13 @@ interface ScheduleViewProps {
   speakers: SpeakerMap;
   isFavorite: (id: string) => boolean;
   onToggle: (id: string) => void;
+  onSelect: (talk: Talk) => void;
   emptyMessage?: string;
 }
 
-export function ScheduleView({ sessions, speakers, isFavorite, onToggle, emptyMessage }: ScheduleViewProps) {
+const DAY_ORDER = Object.fromEntries(DAYS.map((d, i) => [d, i]));
+
+export function ScheduleView({ sessions, speakers, isFavorite, onToggle, onSelect, emptyMessage }: ScheduleViewProps) {
   if (sessions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-500">
@@ -19,32 +23,51 @@ export function ScheduleView({ sessions, speakers, isFavorite, onToggle, emptyMe
     );
   }
 
-  // Group by time, preserving sort order
-  const timeMap = new Map<string, Talk[]>();
+  // Group by day, then by time within each day
+  const dayMap = new Map<string, Map<string, Talk[]>>();
   for (const session of sessions) {
-    const existing = timeMap.get(session.time);
-    if (existing) {
-      existing.push(session);
-    } else {
-      timeMap.set(session.time, [session]);
-    }
+    if (!dayMap.has(session.day)) dayMap.set(session.day, new Map());
+    const timeMap = dayMap.get(session.day)!;
+    if (!timeMap.has(session.time)) timeMap.set(session.time, []);
+    timeMap.get(session.time)!.push(session);
   }
 
-  // Sort time slots lexicographically (HH:MM strings sort correctly)
-  const times = [...timeMap.keys()].sort();
+  // Sort days by conference order (April 8, 9, 10)
+  const days = [...dayMap.keys()].sort(
+    (a, b) => (DAY_ORDER[a] ?? 99) - (DAY_ORDER[b] ?? 99)
+  );
+  const multiDay = days.length > 1;
 
   return (
     <div className="flex flex-col gap-4 py-4">
-      {times.map((time) => (
-        <TimeSlotGroup
-          key={time}
-          time={time}
-          sessions={timeMap.get(time)!}
-          speakers={speakers}
-          isFavorite={isFavorite}
-          onToggle={onToggle}
-        />
-      ))}
+      {days.map((day) => {
+        const timeMap = dayMap.get(day)!;
+        const times = [...timeMap.keys()].sort();
+        return (
+          <div key={day}>
+            {multiDay && (
+              <div className="sticky top-[113px] z-10 -mx-4 px-4 py-2 mb-2 bg-slate-900/95 backdrop-blur border-b border-slate-800">
+                <span className="text-xs font-semibold uppercase tracking-widest text-indigo-400">
+                  {day}
+                </span>
+              </div>
+            )}
+            <div className="flex flex-col gap-4">
+              {times.map((time) => (
+                <TimeSlotGroup
+                  key={`${day}-${time}`}
+                  time={time}
+                  sessions={timeMap.get(time)!}
+                  speakers={speakers}
+                  isFavorite={isFavorite}
+                  onToggle={onToggle}
+                  onSelect={onSelect}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

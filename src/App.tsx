@@ -1,16 +1,18 @@
 import { useState, useMemo } from "react";
-import type { Filters, View } from "./types";
+import type { Filters, View, Talk } from "./types";
 import { useSchedule } from "./hooks/useSchedule";
 import { useFavorites } from "./hooks/useFavorites";
 import { Header } from "./components/layout/Header";
 import { FilterBar } from "./components/filters/FilterBar";
 import { ScheduleView } from "./components/schedule/ScheduleView";
+import { SessionModal } from "./components/schedule/SessionModal";
 
 const DEFAULT_FILTERS: Filters = { day: "All", type: "All", track: "All" };
 
 export default function App() {
   const [view, setView] = useState<View>("schedule");
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [selectedTalk, setSelectedTalk] = useState<Talk | null>(null);
   const { sessions, speakers, loading, error } = useSchedule();
   const { favorites, isFavorite, toggle } = useFavorites();
 
@@ -71,6 +73,7 @@ export default function App() {
             speakers={speakers}
             isFavorite={isFavorite}
             onToggle={toggle}
+            onSelect={setSelectedTalk}
             emptyMessage={
               view === "my-schedule"
                 ? "No sessions saved yet. Star sessions in the Schedule view to add them here."
@@ -79,6 +82,16 @@ export default function App() {
           />
         )}
       </main>
+
+      {selectedTalk && (
+        <SessionModal
+          talk={selectedTalk}
+          speakers={speakers}
+          isFavorite={isFavorite(selectedTalk.id)}
+          onToggle={toggle}
+          onClose={() => setSelectedTalk(null)}
+        />
+      )}
     </div>
   );
 }
