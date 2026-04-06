@@ -27,6 +27,17 @@ export interface RawSpeaker {
   website?: string;
 }
 
+// API returns envelope objects, not plain arrays
+export interface SessionsResponse {
+  sessions: RawTalk[];
+  totalSessions?: number;
+}
+
+export interface SpeakersResponse {
+  speakers: RawSpeaker[];
+  totalSpeakers?: number;
+}
+
 export function normalizeSessions(raw: RawTalk[]): Talk[] {
   return raw.map((r) => {
     const base = {

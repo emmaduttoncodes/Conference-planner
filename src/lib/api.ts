@@ -1,5 +1,5 @@
 import { SESSIONS_URL, SPEAKERS_URL, SESSIONS_CACHE_KEY, SPEAKERS_CACHE_KEY, CACHE_TTL_MS } from "../constants";
-import type { RawTalk, RawSpeaker } from "./normalize";
+import type { RawTalk, RawSpeaker, SessionsResponse, SpeakersResponse } from "./normalize";
 
 interface CacheEntry<T> {
   data: T;
@@ -46,8 +46,12 @@ async function fetchWithCache<T>(url: string, cacheKey: string): Promise<T> {
   return data;
 }
 
-export const fetchSessions = (): Promise<RawTalk[]> =>
-  fetchWithCache<RawTalk[]>(SESSIONS_URL, SESSIONS_CACHE_KEY);
+export const fetchSessions = async (): Promise<RawTalk[]> => {
+  const envelope = await fetchWithCache<SessionsResponse>(SESSIONS_URL, SESSIONS_CACHE_KEY);
+  return envelope.sessions ?? [];
+};
 
-export const fetchSpeakers = (): Promise<RawSpeaker[]> =>
-  fetchWithCache<RawSpeaker[]>(SPEAKERS_URL, SPEAKERS_CACHE_KEY);
+export const fetchSpeakers = async (): Promise<RawSpeaker[]> => {
+  const envelope = await fetchWithCache<SpeakersResponse>(SPEAKERS_URL, SPEAKERS_CACHE_KEY);
+  return envelope.speakers ?? [];
+};
