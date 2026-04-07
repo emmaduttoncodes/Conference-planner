@@ -16,11 +16,16 @@ export interface RawSpeaker {
   id?: string;
   name: string;
   bio?: string;
+  abstract?: string;
+  description?: string;
   photoUrl?: string;
   photo?: string;
+  avatar?: string;
   company?: string;
+  organization?: string;
   role?: string;
   title?: string;
+  jobTitle?: string;
   twitter?: string;
   linkedin?: string;
   github?: string;
@@ -60,10 +65,10 @@ export function normalizeSpeakers(raw: RawSpeaker[]): SpeakerMap {
     const speaker: Speaker = {
       id: s.id ?? s.name,
       name: s.name ?? "",
-      bio: s.bio,
-      photoUrl: s.photoUrl ?? s.photo,
-      company: s.company,
-      role: s.role ?? s.title,
+      bio: s.bio ?? s.abstract ?? s.description,
+      photoUrl: s.photoUrl ?? s.photo ?? s.avatar,
+      company: s.company ?? s.organization,
+      role: s.role ?? s.title ?? s.jobTitle,
       twitter: s.twitter,
       linkedin: s.linkedin,
       github: s.github,

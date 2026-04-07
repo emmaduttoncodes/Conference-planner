@@ -121,14 +121,14 @@ export function SessionModal({ talk, speakers, isFavorite, onToggle, onClose }: 
 
           {/* Description */}
           {talk.description ? (
-            <p className="text-sm text-slate-300 leading-relaxed">{talk.description}</p>
+            <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{talk.description}</p>
           ) : (
             <p className="text-sm text-slate-500 italic">No description available.</p>
           )}
 
           {/* Speakers */}
           {talk.speakers.length > 0 && (
-            <div className="flex flex-col gap-4 pt-2 border-t border-slate-800">
+            <div className="flex flex-col gap-4 pt-3 border-t border-slate-800 pb-6">
               <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
                 {talk.speakers.length === 1 ? "Speaker" : "Speakers"}
               </p>
