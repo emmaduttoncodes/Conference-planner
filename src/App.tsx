@@ -4,10 +4,13 @@ import { useSchedule } from "./hooks/useSchedule";
 import { useFavorites } from "./hooks/useFavorites";
 import { useTheme } from "./hooks/useTheme";
 import { FAVORITES_KEY } from "./constants";
+import { readImportParam, clearImportParam } from "./lib/shareSchedule";
 import { Header } from "./components/layout/Header";
 import { FilterBar } from "./components/filters/FilterBar";
 import { ScheduleView } from "./components/schedule/ScheduleView";
 import { SessionModal } from "./components/schedule/SessionModal";
+import { ShareModal } from "./components/schedule/ShareModal";
+import { ImportBanner } from "./components/schedule/ImportBanner";
 
 const DEFAULT_FILTERS: Filters = { day: "All", type: "All", track: "All" };
 
@@ -15,9 +18,20 @@ export default function App() {
   const [view, setView] = useState<View>("schedule");
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selectedTalkId, setSelectedTalkId] = useState<string | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [pendingImport, setPendingImport] = useState<string[] | null>(null);
   const { sessions, speakers, loading, error, reload } = useSchedule();
   const { favorites, isFavorite, toggle } = useFavorites();
   const { theme, toggle: toggleTheme } = useTheme();
+
+  // Detect shared schedule in URL on mount
+  useEffect(() => {
+    const imported = readImportParam();
+    if (imported && imported.length > 0) {
+      setPendingImport(imported);
+      clearImportParam();
+    }
+  }, []);
 
   // Resolve selected talk from current sessions (avoids stale reference)
   const selectedTalk = useMemo(
@@ -62,6 +76,16 @@ export default function App() {
     [filters.day, sessions]
   );
 
+  const handleImport = useCallback(() => {
+    if (!pendingImport) return;
+    // Merge imported IDs with existing favorites (deduplicate)
+    const existing = new Set(favorites);
+    const merged = [...existing, ...pendingImport.filter((id) => !existing.has(id))];
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(merged));
+    // Force useFavorites to re-read by toggling a dummy - simpler to just reload the page
+    window.location.reload();
+  }, [pendingImport, favorites]);
+
   const filteredSessions = useMemo(() => {
     let result = sessions;
     if (filters.day !== "All") result = result.filter((s) => s.day === filters.day);
@@ -98,6 +122,7 @@ export default function App() {
         favoriteCount={favorites.length}
         theme={theme}
         onThemeToggle={toggleTheme}
+        onShare={view === "my-schedule" && favorites.length > 0 ? () => setShowShareModal(true) : undefined}
       />
 
       {view === "schedule" && (
@@ -108,6 +133,15 @@ export default function App() {
           onClear={() => setFilters(DEFAULT_FILTERS)}
           hasActiveFilters={hasActiveFilters}
           disabled={loading}
+        />
+      )}
+
+      {/* Import banner — shown when a share link was opened */}
+      {pendingImport && (
+        <ImportBanner
+          count={pendingImport.length}
+          onImport={handleImport}
+          onDismiss={() => setPendingImport(null)}
         />
       )}
 
@@ -158,6 +192,13 @@ export default function App() {
           isFavorite={isFavorite(selectedTalk.id)}
           onToggle={toggle}
           onClose={() => setSelectedTalkId(null)}
+        />
+      )}
+
+      {showShareModal && (
+        <ShareModal
+          favoriteIds={favorites}
+          onClose={() => setShowShareModal(false)}
         />
       )}
     </div>
