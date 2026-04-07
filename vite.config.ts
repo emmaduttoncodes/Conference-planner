@@ -5,6 +5,15 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   base: "/Conference-planner/",
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          firebase: ["firebase/app", "firebase/firestore"],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),

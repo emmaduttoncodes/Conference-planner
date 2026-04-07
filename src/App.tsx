@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import type { Filters, View } from "./types";
 import { useSchedule } from "./hooks/useSchedule";
-import { useFavorites } from "./hooks/useFavorites";
+import { useSyncedFavorites } from "./hooks/useSyncedFavorites";
 import { useTheme } from "./hooks/useTheme";
 import { useProfile } from "./hooks/useProfile";
 import { FAVORITES_KEY } from "./constants";
@@ -14,6 +14,7 @@ import { ShareModal } from "./components/schedule/ShareModal";
 import { ImportBanner } from "./components/schedule/ImportBanner";
 import { CompareModal } from "./components/schedule/CompareModal";
 import { ProfileModal } from "./components/profile/ProfileModal";
+import { SyncModal } from "./components/sync/SyncModal";
 
 const DEFAULT_FILTERS: Filters = { day: "All", type: "All", track: "All" };
 
@@ -23,10 +24,12 @@ export default function App() {
   const [selectedTalkId, setSelectedTalkId] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
   const [showCompareModal, setShowCompareModal] = useState(false);
   const [pendingImport, setPendingImport] = useState<string[] | null>(null);
+
   const { sessions, speakers, loading, error, reload } = useSchedule();
-  const { favorites, isFavorite, toggle } = useFavorites();
+  const { favorites, isFavorite, toggle, roomCode, syncStatus, joinRoom, leaveRoom } = useSyncedFavorites();
   const { theme, toggle: toggleTheme } = useTheme();
   const { profile, save: saveProfile, hasProfile } = useProfile();
 
@@ -84,11 +87,9 @@ export default function App() {
 
   const handleImport = useCallback(() => {
     if (!pendingImport) return;
-    // Merge imported IDs with existing favorites (deduplicate)
     const existing = new Set(favorites);
     const merged = [...existing, ...pendingImport.filter((id) => !existing.has(id))];
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(merged));
-    // Force useFavorites to re-read by toggling a dummy - simpler to just reload the page
     window.location.reload();
   }, [pendingImport, favorites]);
 
@@ -131,6 +132,8 @@ export default function App() {
         onShare={view === "my-schedule" && favorites.length > 0 ? () => setShowShareModal(true) : undefined}
         onProfile={() => setShowProfileModal(true)}
         hasProfile={hasProfile}
+        onSync={() => setShowSyncModal(true)}
+        syncStatus={syncStatus}
       />
 
       {view === "schedule" && (
@@ -229,6 +232,16 @@ export default function App() {
           profile={profile}
           onSave={saveProfile}
           onClose={() => setShowProfileModal(false)}
+        />
+      )}
+
+      {showSyncModal && (
+        <SyncModal
+          roomCode={roomCode}
+          syncStatus={syncStatus}
+          onJoinRoom={joinRoom}
+          onLeaveRoom={leaveRoom}
+          onClose={() => setShowSyncModal(false)}
         />
       )}
     </div>

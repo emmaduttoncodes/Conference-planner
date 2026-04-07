@@ -1,4 +1,5 @@
 import type { View } from "../../types";
+import type { SyncStatus } from "../../hooks/useSyncedFavorites";
 
 interface HeaderProps {
   view: View;
@@ -9,9 +10,22 @@ interface HeaderProps {
   onShare?: () => void;
   onProfile: () => void;
   hasProfile: boolean;
+  onSync: () => void;
+  syncStatus: SyncStatus;
 }
 
-export function Header({ view, onViewChange, favoriteCount, theme, onThemeToggle, onShare, onProfile, hasProfile }: HeaderProps) {
+export function Header({
+  view, onViewChange, favoriteCount,
+  theme, onThemeToggle,
+  onShare, onProfile, hasProfile,
+  onSync, syncStatus,
+}: HeaderProps) {
+  const syncColor =
+    syncStatus === "synced"     ? "text-emerald-500 hover:text-emerald-600" :
+    syncStatus === "connecting" ? "text-amber-500" :
+    syncStatus === "error"      ? "text-red-500" :
+    "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white";
+
   return (
     <header className="sticky top-0 z-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
@@ -60,7 +74,7 @@ export function Header({ view, onViewChange, favoriteCount, theme, onThemeToggle
             aria-label="My LinkedIn QR"
             title="My LinkedIn QR"
             className={[
-              "w-8 h-8 flex items-center justify-center rounded-lg transition-colors relative",
+              "w-8 h-8 flex items-center justify-center rounded-lg transition-colors",
               hasProfile
                 ? "text-[#0A66C2] hover:bg-blue-50 dark:hover:bg-slate-800"
                 : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800",
@@ -68,6 +82,18 @@ export function Header({ view, onViewChange, favoriteCount, theme, onThemeToggle
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
               <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+          </button>
+
+          {/* Live sync button */}
+          <button
+            onClick={onSync}
+            aria-label="Live sync"
+            title="Live sync"
+            className={`w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${syncColor}`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-4 h-4 ${syncStatus === "connecting" ? "animate-spin" : ""}`}>
+              <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
             </svg>
           </button>
 
