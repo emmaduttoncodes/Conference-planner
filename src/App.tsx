@@ -2,11 +2,15 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import type { Filters, View } from "./types";
 import { useSchedule } from "./hooks/useSchedule";
 import { useFavorites } from "./hooks/useFavorites";
+import { useTheme } from "./hooks/useTheme";
 import { FAVORITES_KEY } from "./constants";
+import { readImportParam, clearImportParam } from "./lib/shareSchedule";
 import { Header } from "./components/layout/Header";
 import { FilterBar } from "./components/filters/FilterBar";
 import { ScheduleView } from "./components/schedule/ScheduleView";
 import { SessionModal } from "./components/schedule/SessionModal";
+import { ShareModal } from "./components/schedule/ShareModal";
+import { ImportBanner } from "./components/schedule/ImportBanner";
 
 const DEFAULT_FILTERS: Filters = { day: "All", type: "All", track: "All" };
 
@@ -14,8 +18,20 @@ export default function App() {
   const [view, setView] = useState<View>("schedule");
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selectedTalkId, setSelectedTalkId] = useState<string | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [pendingImport, setPendingImport] = useState<string[] | null>(null);
   const { sessions, speakers, loading, error, reload } = useSchedule();
   const { favorites, isFavorite, toggle } = useFavorites();
+  const { theme, toggle: toggleTheme } = useTheme();
+
+  // Detect shared schedule in URL on mount
+  useEffect(() => {
+    const imported = readImportParam();
+    if (imported && imported.length > 0) {
+      setPendingImport(imported);
+      clearImportParam();
+    }
+  }, []);
 
   // Resolve selected talk from current sessions (avoids stale reference)
   const selectedTalk = useMemo(
@@ -60,6 +76,16 @@ export default function App() {
     [filters.day, sessions]
   );
 
+  const handleImport = useCallback(() => {
+    if (!pendingImport) return;
+    // Merge imported IDs with existing favorites (deduplicate)
+    const existing = new Set(favorites);
+    const merged = [...existing, ...pendingImport.filter((id) => !existing.has(id))];
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(merged));
+    // Force useFavorites to re-read by toggling a dummy - simpler to just reload the page
+    window.location.reload();
+  }, [pendingImport, favorites]);
+
   const filteredSessions = useMemo(() => {
     let result = sessions;
     if (filters.day !== "All") result = result.filter((s) => s.day === filters.day);
@@ -89,11 +115,14 @@ export default function App() {
     filters.day !== "All" || filters.type !== "All" || filters.track !== "All";
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white">
       <Header
         view={view}
         onViewChange={handleViewChange}
         favoriteCount={favorites.length}
+        theme={theme}
+        onThemeToggle={toggleTheme}
+        onShare={view === "my-schedule" && favorites.length > 0 ? () => setShowShareModal(true) : undefined}
       />
 
       {view === "schedule" && (
@@ -107,9 +136,18 @@ export default function App() {
         />
       )}
 
+      {/* Import banner — shown when a share link was opened */}
+      {pendingImport && (
+        <ImportBanner
+          count={pendingImport.length}
+          onImport={handleImport}
+          onDismiss={() => setPendingImport(null)}
+        />
+      )}
+
       <main className="max-w-5xl mx-auto px-4">
         {loading && (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+          <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-slate-500">
             <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
             <p className="text-sm">Loading schedule…</p>
           </div>
@@ -118,7 +156,7 @@ export default function App() {
         {error && !loading && (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <span className="text-4xl">⚠️</span>
-            <p className="text-red-400 text-center text-sm">{error}</p>
+            <p className="text-red-500 dark:text-red-400 text-center text-sm">{error}</p>
             <button
               onClick={reload}
               className="mt-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors"
@@ -154,6 +192,13 @@ export default function App() {
           isFavorite={isFavorite(selectedTalk.id)}
           onToggle={toggle}
           onClose={() => setSelectedTalkId(null)}
+        />
+      )}
+
+      {showShareModal && (
+        <ShareModal
+          favoriteIds={favorites}
+          onClose={() => setShowShareModal(false)}
         />
       )}
     </div>

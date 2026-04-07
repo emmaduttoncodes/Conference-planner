@@ -31,7 +31,7 @@ export function TimeSlotGroup({
   return (
     <div className="flex gap-3 items-start">
       <div className="w-14 shrink-0 pt-3 text-right">
-        <span className="text-xs font-mono text-slate-400 whitespace-nowrap">
+        <span className="text-xs font-mono text-slate-400 dark:text-slate-500 whitespace-nowrap">
           {time.split("-")[0]}
         </span>
       </div>
