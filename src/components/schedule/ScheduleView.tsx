@@ -9,11 +9,12 @@ interface ScheduleViewProps {
   onToggle: (id: string) => void;
   onSelect: (talk: Talk) => void;
   emptyMessage?: string;
+  filterBarShown?: boolean;
 }
 
 const DAY_ORDER = Object.fromEntries(DAYS.map((d, i) => [d, i]));
 
-export function ScheduleView({ sessions, speakers, isFavorite, onToggle, onSelect, emptyMessage }: ScheduleViewProps) {
+export function ScheduleView({ sessions, speakers, isFavorite, onToggle, onSelect, emptyMessage, filterBarShown = true }: ScheduleViewProps) {
   if (sessions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-500">
@@ -46,7 +47,7 @@ export function ScheduleView({ sessions, speakers, isFavorite, onToggle, onSelec
         return (
           <div key={day}>
             {multiDay && (
-              <div className="sticky top-[113px] z-10 -mx-4 px-4 py-2 mb-2 bg-slate-900/95 backdrop-blur border-b border-slate-800">
+              <div className={`sticky ${filterBarShown ? "top-[113px]" : "top-14"} z-10 -mx-4 px-4 py-2 mb-2 bg-slate-900/95 backdrop-blur border-b border-slate-800`}>
                 <span className="text-xs font-semibold uppercase tracking-widest text-indigo-400">
                   {day}
                 </span>

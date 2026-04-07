@@ -74,6 +74,7 @@ export default function App() {
             isFavorite={isFavorite}
             onToggle={toggle}
             onSelect={setSelectedTalk}
+            filterBarShown={view === "schedule"}
             emptyMessage={
               view === "my-schedule"
                 ? "No sessions saved yet. Star sessions in the Schedule view to add them here."
