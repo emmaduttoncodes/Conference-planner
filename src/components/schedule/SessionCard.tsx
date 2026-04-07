@@ -19,7 +19,7 @@ export function SessionCard({
   onSelect,
 }: SessionCardProps) {
   const isBreak = talk.type === "break";
-  const typeColor = TYPE_COLORS[talk.type] ?? "bg-slate-200 text-slate-700";
+  const typeColor = TYPE_COLORS[talk.type] ?? "bg-slate-100 text-slate-600 dark:bg-slate-200 dark:text-slate-700";
   const typeLabel = TYPE_LABELS[talk.type] ?? talk.type;
 
   // Filter out TBD speakers for the card preview
@@ -44,13 +44,13 @@ export function SessionCard({
       className={[
         "rounded-lg border flex flex-col gap-1.5 text-sm transition-all outline-none",
         isBreak
-          ? "bg-slate-800/40 border-slate-800"
-          : "bg-slate-800 cursor-pointer hover:bg-slate-700/80 focus-visible:ring-2 focus-visible:ring-indigo-500",
+          ? "bg-slate-100/80 border-slate-200 dark:bg-slate-800/40 dark:border-slate-800"
+          : "bg-white dark:bg-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/80 focus-visible:ring-2 focus-visible:ring-indigo-500",
         isFavorite
           ? "border-amber-400 shadow-[0_0_0_1px_rgba(251,191,36,0.25)]"
           : isBreak
           ? ""
-          : "border-slate-700 hover:border-slate-500",
+          : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-500",
       ].join(" ")}
     >
       <div className="p-3 flex flex-col gap-1.5">
@@ -62,11 +62,11 @@ export function SessionCard({
             >
               {typeLabel}
             </span>
-            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
               {talk.room}
             </span>
             {talk.track && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700/60 text-slate-400">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 dark:bg-slate-700/60 dark:text-slate-400">
                 {talk.track}
               </span>
             )}
@@ -84,7 +84,7 @@ export function SessionCard({
                 "shrink-0 text-lg leading-none transition-colors mt-0.5",
                 isFavorite
                   ? "text-amber-400"
-                  : "text-slate-600 hover:text-amber-400",
+                  : "text-slate-300 dark:text-slate-600 hover:text-amber-400",
               ].join(" ")}
             >
               {isFavorite ? "★" : "☆"}
@@ -93,14 +93,14 @@ export function SessionCard({
         </div>
 
         {/* Time */}
-        <p className="text-[10px] text-slate-500 font-medium">
+        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
           {talk.day} · {talk.time}
         </p>
 
         {/* Title */}
         <p
           className={`font-semibold leading-snug ${
-            isBreak ? "text-slate-500" : "text-white"
+            isBreak ? "text-slate-400 dark:text-slate-500" : "text-slate-900 dark:text-white"
           }`}
         >
           {talk.title}

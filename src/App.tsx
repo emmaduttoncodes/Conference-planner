@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import type { Filters, View } from "./types";
 import { useSchedule } from "./hooks/useSchedule";
 import { useFavorites } from "./hooks/useFavorites";
+import { useTheme } from "./hooks/useTheme";
 import { FAVORITES_KEY } from "./constants";
 import { Header } from "./components/layout/Header";
 import { FilterBar } from "./components/filters/FilterBar";
@@ -16,6 +17,7 @@ export default function App() {
   const [selectedTalkId, setSelectedTalkId] = useState<string | null>(null);
   const { sessions, speakers, loading, error, reload } = useSchedule();
   const { favorites, isFavorite, toggle } = useFavorites();
+  const { theme, toggle: toggleTheme } = useTheme();
 
   // Resolve selected talk from current sessions (avoids stale reference)
   const selectedTalk = useMemo(
@@ -89,11 +91,13 @@ export default function App() {
     filters.day !== "All" || filters.type !== "All" || filters.track !== "All";
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white">
       <Header
         view={view}
         onViewChange={handleViewChange}
         favoriteCount={favorites.length}
+        theme={theme}
+        onThemeToggle={toggleTheme}
       />
 
       {view === "schedule" && (
@@ -109,7 +113,7 @@ export default function App() {
 
       <main className="max-w-5xl mx-auto px-4">
         {loading && (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+          <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-slate-500">
             <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
             <p className="text-sm">Loading schedule…</p>
           </div>
@@ -118,7 +122,7 @@ export default function App() {
         {error && !loading && (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <span className="text-4xl">⚠️</span>
-            <p className="text-red-400 text-center text-sm">{error}</p>
+            <p className="text-red-500 dark:text-red-400 text-center text-sm">{error}</p>
             <button
               onClick={reload}
               className="mt-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors"

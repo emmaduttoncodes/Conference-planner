@@ -38,14 +38,14 @@ export function SpeakerBadge({ speaker, speakerName }: SpeakerBadgeProps) {
           src={photoUrl}
           alt={name}
           onError={() => setImgError(true)}
-          className="w-5 h-5 rounded-full object-cover shrink-0 bg-slate-600"
+          className="w-5 h-5 rounded-full object-cover shrink-0 bg-slate-200 dark:bg-slate-600"
         />
       ) : (
-        <span className="w-5 h-5 rounded-full bg-slate-600 text-white flex items-center justify-center text-[9px] font-semibold shrink-0">
+        <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-white flex items-center justify-center text-[9px] font-semibold shrink-0">
           {getInitials(name)}
         </span>
       )}
-      <span className="text-slate-300 truncate max-w-[130px]">{name}</span>
+      <span className="text-slate-500 dark:text-slate-300 truncate max-w-[130px]">{name}</span>
     </span>
   );
 }

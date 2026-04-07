@@ -26,7 +26,7 @@ export function ScheduleView({
 }: ScheduleViewProps) {
   if (sessions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+      <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-slate-500">
         <span className="text-4xl mb-3">📅</span>
         <p className="text-sm">{emptyMessage ?? "No sessions found."}</p>
       </div>
@@ -61,9 +61,9 @@ export function ScheduleView({
           <div key={day}>
             {multiDay && (
               <div
-                className={`sticky ${filterBarShown ? "top-[113px]" : "top-14"} z-10 -mx-4 px-4 py-2 mb-2 bg-slate-900/95 backdrop-blur border-b border-slate-800`}
+                className={`sticky ${filterBarShown ? "top-[113px]" : "top-14"} z-10 -mx-4 px-4 py-2 mb-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800`}
               >
-                <span className="text-xs font-semibold uppercase tracking-widest text-indigo-400">
+                <span className="text-xs font-semibold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
                   {day}
                 </span>
               </div>
