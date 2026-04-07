@@ -12,6 +12,7 @@ import { ScheduleView } from "./components/schedule/ScheduleView";
 import { SessionModal } from "./components/schedule/SessionModal";
 import { ShareModal } from "./components/schedule/ShareModal";
 import { ImportBanner } from "./components/schedule/ImportBanner";
+import { CompareModal } from "./components/schedule/CompareModal";
 import { ProfileModal } from "./components/profile/ProfileModal";
 
 const DEFAULT_FILTERS: Filters = { day: "All", type: "All", track: "All" };
@@ -22,6 +23,7 @@ export default function App() {
   const [selectedTalkId, setSelectedTalkId] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showCompareModal, setShowCompareModal] = useState(false);
   const [pendingImport, setPendingImport] = useState<string[] | null>(null);
   const { sessions, speakers, loading, error, reload } = useSchedule();
   const { favorites, isFavorite, toggle } = useFavorites();
@@ -146,7 +148,9 @@ export default function App() {
       {pendingImport && (
         <ImportBanner
           count={pendingImport.length}
+          commonCount={pendingImport.filter((id) => favorites.includes(id)).length}
           onImport={handleImport}
+          onCompare={() => setShowCompareModal(true)}
           onDismiss={() => setPendingImport(null)}
         />
       )}
@@ -205,6 +209,18 @@ export default function App() {
         <ShareModal
           favoriteIds={favorites}
           onClose={() => setShowShareModal(false)}
+        />
+      )}
+
+      {showCompareModal && pendingImport && (
+        <CompareModal
+          myIds={favorites}
+          theirIds={pendingImport}
+          sessions={sessions}
+          speakers={speakers}
+          onSelect={setSelectedTalkId}
+          onImport={() => { setShowCompareModal(false); handleImport(); }}
+          onClose={() => setShowCompareModal(false)}
         />
       )}
 
