@@ -3,6 +3,7 @@ import type { Filters, View } from "./types";
 import { useSchedule } from "./hooks/useSchedule";
 import { useFavorites } from "./hooks/useFavorites";
 import { useTheme } from "./hooks/useTheme";
+import { useProfile } from "./hooks/useProfile";
 import { FAVORITES_KEY } from "./constants";
 import { readImportParam, clearImportParam } from "./lib/shareSchedule";
 import { Header } from "./components/layout/Header";
@@ -11,6 +12,7 @@ import { ScheduleView } from "./components/schedule/ScheduleView";
 import { SessionModal } from "./components/schedule/SessionModal";
 import { ShareModal } from "./components/schedule/ShareModal";
 import { ImportBanner } from "./components/schedule/ImportBanner";
+import { ProfileModal } from "./components/profile/ProfileModal";
 
 const DEFAULT_FILTERS: Filters = { day: "All", type: "All", track: "All" };
 
@@ -19,10 +21,12 @@ export default function App() {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selectedTalkId, setSelectedTalkId] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [pendingImport, setPendingImport] = useState<string[] | null>(null);
   const { sessions, speakers, loading, error, reload } = useSchedule();
   const { favorites, isFavorite, toggle } = useFavorites();
   const { theme, toggle: toggleTheme } = useTheme();
+  const { profile, save: saveProfile, hasProfile } = useProfile();
 
   // Detect shared schedule in URL on mount
   useEffect(() => {
@@ -123,6 +127,8 @@ export default function App() {
         theme={theme}
         onThemeToggle={toggleTheme}
         onShare={view === "my-schedule" && favorites.length > 0 ? () => setShowShareModal(true) : undefined}
+        onProfile={() => setShowProfileModal(true)}
+        hasProfile={hasProfile}
       />
 
       {view === "schedule" && (
@@ -199,6 +205,14 @@ export default function App() {
         <ShareModal
           favoriteIds={favorites}
           onClose={() => setShowShareModal(false)}
+        />
+      )}
+
+      {showProfileModal && (
+        <ProfileModal
+          profile={profile}
+          onSave={saveProfile}
+          onClose={() => setShowProfileModal(false)}
         />
       )}
     </div>
