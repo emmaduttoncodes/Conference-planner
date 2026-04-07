@@ -1,4 +1,5 @@
 import type { Talk, SpeakerMap } from "../../types";
+import type { Friend } from "../../hooks/useFriends";
 import { ROOM_ORDER } from "../../constants";
 import { SessionCard } from "./SessionCard";
 
@@ -9,6 +10,7 @@ interface TimeSlotGroupProps {
   isFavorite: (id: string) => boolean;
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
+  friendsForSession: (id: string) => Friend[];
 }
 
 function roomSortKey(room: string): number {
@@ -17,16 +19,9 @@ function roomSortKey(room: string): number {
 }
 
 export function TimeSlotGroup({
-  time,
-  sessions,
-  speakers,
-  isFavorite,
-  onToggle,
-  onSelect,
+  time, sessions, speakers, isFavorite, onToggle, onSelect, friendsForSession,
 }: TimeSlotGroupProps) {
-  const sorted = [...sessions].sort(
-    (a, b) => roomSortKey(a.room) - roomSortKey(b.room)
-  );
+  const sorted = [...sessions].sort((a, b) => roomSortKey(a.room) - roomSortKey(b.room));
 
   return (
     <div className="flex gap-3 items-start">
@@ -44,6 +39,7 @@ export function TimeSlotGroup({
             isFavorite={isFavorite(talk.id)}
             onToggle={onToggle}
             onSelect={onSelect}
+            friendsAttending={friendsForSession(talk.id)}
           />
         ))}
       </div>

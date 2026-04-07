@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import type { Filters, View } from "./types";
 import { useSchedule } from "./hooks/useSchedule";
 import { useSyncedFavorites } from "./hooks/useSyncedFavorites";
+import { useFriends } from "./hooks/useFriends";
 import { useTheme } from "./hooks/useTheme";
 import { useProfile } from "./hooks/useProfile";
 import { FAVORITES_KEY } from "./constants";
@@ -30,6 +31,7 @@ export default function App() {
 
   const { sessions, speakers, loading, error, reload } = useSchedule();
   const { favorites, isFavorite, toggle, roomCode, syncStatus, joinRoom, leaveRoom } = useSyncedFavorites();
+  const { friends, friendsForSession, addFriend, removeFriend } = useFriends();
   const { theme, toggle: toggleTheme } = useTheme();
   const { profile, save: saveProfile, hasProfile } = useProfile();
 
@@ -187,6 +189,7 @@ export default function App() {
             onToggle={toggle}
             onSelect={setSelectedTalkId}
             filterBarShown={view === "schedule"}
+            friendsForSession={friendsForSession}
             emptyMessage={
               view === "my-schedule"
                 ? "No sessions saved yet. Star sessions in the Schedule view to add them here."
@@ -239,8 +242,11 @@ export default function App() {
         <SyncModal
           roomCode={roomCode}
           syncStatus={syncStatus}
+          friends={friends}
           onJoinRoom={joinRoom}
           onLeaveRoom={leaveRoom}
+          onAddFriend={addFriend}
+          onRemoveFriend={removeFriend}
           onClose={() => setShowSyncModal(false)}
         />
       )}

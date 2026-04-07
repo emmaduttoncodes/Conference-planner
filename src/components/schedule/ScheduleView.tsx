@@ -1,4 +1,5 @@
 import type { Talk, SpeakerMap } from "../../types";
+import type { Friend } from "../../hooks/useFriends";
 import { DAYS } from "../../constants";
 import { parseTimeToMinutes } from "../../lib/time";
 import { TimeSlotGroup } from "./TimeSlotGroup";
@@ -11,18 +12,14 @@ interface ScheduleViewProps {
   onSelect: (id: string) => void;
   emptyMessage?: string;
   filterBarShown?: boolean;
+  friendsForSession: (id: string) => Friend[];
 }
 
 const DAY_ORDER = Object.fromEntries(DAYS.map((d, i) => [d, i]));
 
 export function ScheduleView({
-  sessions,
-  speakers,
-  isFavorite,
-  onToggle,
-  onSelect,
-  emptyMessage,
-  filterBarShown = true,
+  sessions, speakers, isFavorite, onToggle, onSelect,
+  emptyMessage, filterBarShown = true, friendsForSession,
 }: ScheduleViewProps) {
   if (sessions.length === 0) {
     return (
@@ -33,7 +30,6 @@ export function ScheduleView({
     );
   }
 
-  // Group by day → time
   const dayMap = new Map<string, Map<string, Talk[]>>();
   for (const session of sessions) {
     if (!dayMap.has(session.day)) dayMap.set(session.day, new Map());
@@ -42,17 +38,13 @@ export function ScheduleView({
     timeMap.get(session.time)!.push(session);
   }
 
-  // Sort days by conference order
-  const days = [...dayMap.keys()].sort(
-    (a, b) => (DAY_ORDER[a] ?? 99) - (DAY_ORDER[b] ?? 99)
-  );
+  const days = [...dayMap.keys()].sort((a, b) => (DAY_ORDER[a] ?? 99) - (DAY_ORDER[b] ?? 99));
   const multiDay = days.length > 1;
 
   return (
     <div className="flex flex-col gap-4 py-4">
       {days.map((day) => {
         const timeMap = dayMap.get(day)!;
-        // Sort times numerically, not lexicographically
         const times = [...timeMap.keys()].sort(
           (a, b) => parseTimeToMinutes(a) - parseTimeToMinutes(b)
         );
@@ -60,9 +52,7 @@ export function ScheduleView({
         return (
           <div key={day}>
             {multiDay && (
-              <div
-                className={`sticky ${filterBarShown ? "top-[113px]" : "top-14"} z-10 -mx-4 px-4 py-2 mb-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800`}
-              >
+              <div className={`sticky ${filterBarShown ? "top-[113px]" : "top-14"} z-10 -mx-4 px-4 py-2 mb-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800`}>
                 <span className="text-xs font-semibold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
                   {day}
                 </span>
@@ -78,6 +68,7 @@ export function ScheduleView({
                   isFavorite={isFavorite}
                   onToggle={onToggle}
                   onSelect={onSelect}
+                  friendsForSession={friendsForSession}
                 />
               ))}
             </div>
