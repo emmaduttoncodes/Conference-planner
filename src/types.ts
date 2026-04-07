@@ -6,13 +6,9 @@ export type Room =
   | "Moore"
   | "St. James"
   | "Westminster";
-export type SessionType =
-  | "keynote"
-  | "talk"
-  | "workshop"
-  | "panel"
-  | "break"
-  | "expo";
+// Core known types — the API may return others (e.g. "expo_session") which
+// normalize.ts maps to these canonical values.
+export type SessionType = string;
 
 export interface Talk {
   id: string;

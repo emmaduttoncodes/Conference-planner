@@ -8,8 +8,9 @@ interface SpeakerBadgeProps {
 }
 
 function getInitials(name: string): string {
-  return name
-    .split(/\s+/)
+  const words = name.trim().split(/\s+/);
+  if (words.length === 0 || !words[0]) return "?";
+  return words
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase() ?? "")
     .join("");
@@ -18,29 +19,33 @@ function getInitials(name: string): string {
 export function SpeakerBadge({ speaker, speakerName }: SpeakerBadgeProps) {
   const [imgError, setImgError] = useState(false);
   const name = speaker?.name ?? speakerName;
-  const isTbd = TBD_REGEX.test(name);
+
+  // Hide TBD speakers entirely
+  if (TBD_REGEX.test(name) || !name.trim()) return null;
+
   const photoUrl = speaker?.photoUrl;
-  const showImg = photoUrl && !imgError && !isTbd;
+  const showImg = photoUrl && !imgError;
 
   return (
     <span
-      className="inline-flex items-center gap-1 text-xs"
-      style={{ opacity: isTbd ? 0.5 : 1 }}
-      title={`${name}${speaker?.company ? ` — ${speaker.company}` : ""}${speaker?.role ? `, ${speaker.role}` : ""}`}
+      className="inline-flex items-center gap-1.5 text-xs"
+      title={
+        [name, speaker?.company, speaker?.role].filter(Boolean).join(" — ")
+      }
     >
       {showImg ? (
         <img
           src={photoUrl}
           alt={name}
           onError={() => setImgError(true)}
-          className="w-5 h-5 rounded-full object-cover shrink-0"
+          className="w-5 h-5 rounded-full object-cover shrink-0 bg-slate-600"
         />
       ) : (
         <span className="w-5 h-5 rounded-full bg-slate-600 text-white flex items-center justify-center text-[9px] font-semibold shrink-0">
           {getInitials(name)}
         </span>
       )}
-      <span className="text-slate-300 truncate max-w-[120px]">{name}</span>
+      <span className="text-slate-300 truncate max-w-[130px]">{name}</span>
     </span>
   );
 }

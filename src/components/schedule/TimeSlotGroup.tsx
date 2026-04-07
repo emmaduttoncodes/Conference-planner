@@ -8,7 +8,7 @@ interface TimeSlotGroupProps {
   speakers: SpeakerMap;
   isFavorite: (id: string) => boolean;
   onToggle: (id: string) => void;
-  onSelect: (talk: Talk) => void;
+  onSelect: (id: string) => void;
 }
 
 function roomSortKey(room: string): number {
@@ -16,13 +16,24 @@ function roomSortKey(room: string): number {
   return idx === -1 ? ROOM_ORDER.length : idx;
 }
 
-export function TimeSlotGroup({ time, sessions, speakers, isFavorite, onToggle, onSelect }: TimeSlotGroupProps) {
-  const sorted = [...sessions].sort((a, b) => roomSortKey(a.room) - roomSortKey(b.room));
+export function TimeSlotGroup({
+  time,
+  sessions,
+  speakers,
+  isFavorite,
+  onToggle,
+  onSelect,
+}: TimeSlotGroupProps) {
+  const sorted = [...sessions].sort(
+    (a, b) => roomSortKey(a.room) - roomSortKey(b.room)
+  );
 
   return (
     <div className="flex gap-3 items-start">
       <div className="w-14 shrink-0 pt-3 text-right">
-        <span className="text-xs font-mono text-slate-400">{time}</span>
+        <span className="text-xs font-mono text-slate-400 whitespace-nowrap">
+          {time.split("-")[0]}
+        </span>
       </div>
       <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 min-w-0">
         {sorted.map((talk) => (

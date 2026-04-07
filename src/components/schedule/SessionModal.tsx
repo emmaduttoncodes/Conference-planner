@@ -1,7 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { Talk, SpeakerMap, Speaker } from "../../types";
-import { TYPE_COLORS } from "../../constants";
-import { TBD_REGEX } from "../../constants";
+import { TYPE_COLORS, TYPE_LABELS, TBD_REGEX } from "../../constants";
+import { lookupSpeaker } from "../../lib/normalize";
 
 interface SessionModalProps {
   talk: Talk;
@@ -11,12 +11,22 @@ interface SessionModalProps {
   onClose: () => void;
 }
 
-function SpeakerDetail({ speaker, name }: { speaker: Speaker | undefined; name: string }) {
-  const isTbd = TBD_REGEX.test(name);
-  if (isTbd) return null;
+function SpeakerDetail({
+  speaker,
+  name,
+}: {
+  speaker: Speaker | undefined;
+  name: string;
+}) {
+  if (!name.trim() || TBD_REGEX.test(name)) return null;
 
   const displayName = speaker?.name ?? name;
   const photo = speaker?.photoUrl;
+  const initials = displayName
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("") || "?";
 
   return (
     <div className="flex gap-3 items-start">
@@ -24,85 +34,132 @@ function SpeakerDetail({ speaker, name }: { speaker: Speaker | undefined; name: 
         <img
           src={photo}
           alt={displayName}
-          className="w-12 h-12 rounded-full object-cover shrink-0"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          className="w-12 h-12 rounded-full object-cover shrink-0 bg-slate-700"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = "none";
+          }}
         />
       ) : (
         <div className="w-12 h-12 rounded-full bg-slate-600 flex items-center justify-center text-white font-semibold text-sm shrink-0">
-          {displayName.split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? "").join("")}
+          {initials}
         </div>
       )}
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="font-semibold text-white">{displayName}</p>
         {(speaker?.role || speaker?.company) && (
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-400 mt-0.5">
             {[speaker.role, speaker.company].filter(Boolean).join(" · ")}
           </p>
         )}
         {speaker?.bio && (
-          <p className="text-sm text-slate-300 mt-1 leading-relaxed">{speaker.bio}</p>
+          <p className="text-sm text-slate-300 mt-2 leading-relaxed whitespace-pre-wrap">
+            {speaker.bio.trim()}
+          </p>
         )}
       </div>
     </div>
   );
 }
 
-export function SessionModal({ talk, speakers, isFavorite, onToggle, onClose }: SessionModalProps) {
-  const typeColor = TYPE_COLORS[talk.type] ?? "bg-slate-100 text-slate-700";
+export function SessionModal({
+  talk,
+  speakers,
+  isFavorite,
+  onToggle,
+  onClose,
+}: SessionModalProps) {
+  const typeColor = TYPE_COLORS[talk.type] ?? "bg-slate-200 text-slate-700";
+  const typeLabel = TYPE_LABELS[talk.type] ?? talk.type;
+  const closeRef = useRef<HTMLButtonElement>(null);
 
-  // Close on Escape key
+  // Focus close button on mount for keyboard accessibility
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    closeRef.current?.focus();
+  }, []);
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  // Prevent body scroll while modal is open
+  // Prevent body scroll
   useEffect(() => {
+    const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, []);
+
+  const visibleSpeakers = talk.speakers.filter((n) => n.trim() && !TBD_REGEX.test(n));
+  const hasSpeakers = visibleSpeakers.length > 0;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={talk.title}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
       onClick={onClose}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/75" />
 
       {/* Panel */}
       <div
-        className="relative w-full sm:max-w-lg max-h-[90dvh] flex flex-col bg-slate-900 sm:rounded-xl border border-slate-700 shadow-2xl overflow-hidden"
+        className="relative w-full sm:max-w-lg max-h-[92dvh] flex flex-col bg-slate-900 sm:rounded-xl border border-slate-700 shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-start justify-between gap-3 p-4 border-b border-slate-800 shrink-0">
-          <div className="flex flex-wrap gap-1.5 items-center">
-            <span className={`text-[11px] font-medium px-2 py-0.5 rounded capitalize ${typeColor}`}>
-              {talk.type}
-            </span>
-            <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-700 text-slate-300">
-              {talk.room}
-            </span>
-            {talk.track && (
-              <span className="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
-                {talk.track}
+        {/* Sticky header */}
+        <div className="flex items-start gap-3 px-4 pt-4 pb-3 border-b border-slate-800 shrink-0">
+          <div className="flex-1 min-w-0">
+            {/* Badges */}
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              <span
+                className={`text-[11px] font-semibold px-2 py-0.5 rounded capitalize ${typeColor}`}
+              >
+                {typeLabel}
               </span>
-            )}
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-700 text-slate-300">
+                {talk.room}
+              </span>
+              {talk.track && (
+                <span className="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                  {talk.track}
+                </span>
+              )}
+            </div>
+            {/* Title always visible */}
+            <h2 className="text-base font-bold text-white leading-snug pr-2">
+              {talk.title}
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">
+              {talk.day} · {talk.time}
+            </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1 shrink-0 mt-0.5">
             <button
               onClick={() => onToggle(talk.id)}
-              aria-label={isFavorite ? "Remove from my schedule" : "Add to my schedule"}
-              className={`text-2xl leading-none transition-colors ${isFavorite ? "text-amber-400" : "text-slate-500 hover:text-amber-400"}`}
+              aria-label={
+                isFavorite ? "Remove from My Schedule" : "Add to My Schedule"
+              }
+              className={`text-2xl leading-none p-1 transition-colors rounded ${
+                isFavorite
+                  ? "text-amber-400"
+                  : "text-slate-500 hover:text-amber-400"
+              }`}
             >
               {isFavorite ? "★" : "☆"}
             </button>
             <button
+              ref={closeRef}
               onClick={onClose}
               aria-label="Close"
-              className="text-slate-400 hover:text-white text-xl leading-none w-8 h-8 flex items-center justify-center rounded hover:bg-slate-800 transition-colors"
+              className="text-slate-400 hover:text-white text-lg leading-none w-8 h-8 flex items-center justify-center rounded hover:bg-slate-800 transition-colors"
             >
               ✕
             </button>
@@ -110,30 +167,34 @@ export function SessionModal({ talk, speakers, isFavorite, onToggle, onClose }: 
         </div>
 
         {/* Scrollable content */}
-        <div className="overflow-y-auto p-4 flex flex-col gap-4">
-          {/* Time + day */}
-          <p className="text-xs text-slate-400 font-medium">
-            {talk.day} · {talk.time}
-          </p>
-
-          {/* Title */}
-          <h2 className="text-lg font-bold text-white leading-snug">{talk.title}</h2>
-
+        <div className="overflow-y-auto overscroll-contain flex flex-col divide-y divide-slate-800">
           {/* Description */}
           {talk.description ? (
-            <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{talk.description}</p>
+            <div className="px-4 py-4">
+              <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+                {talk.description.trim()}
+              </p>
+            </div>
           ) : (
-            <p className="text-sm text-slate-500 italic">No description available.</p>
+            <div className="px-4 py-4">
+              <p className="text-sm text-slate-500 italic">
+                No description available.
+              </p>
+            </div>
           )}
 
           {/* Speakers */}
-          {talk.speakers.length > 0 && (
-            <div className="flex flex-col gap-4 pt-3 border-t border-slate-800 pb-6">
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
-                {talk.speakers.length === 1 ? "Speaker" : "Speakers"}
+          {hasSpeakers && (
+            <div className="px-4 py-4 flex flex-col gap-5 pb-8">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">
+                {visibleSpeakers.length === 1 ? "Speaker" : "Speakers"}
               </p>
-              {talk.speakers.map((name) => (
-                <SpeakerDetail key={name} name={name} speaker={speakers[name]} />
+              {visibleSpeakers.map((name) => (
+                <SpeakerDetail
+                  key={name}
+                  name={name}
+                  speaker={lookupSpeaker(speakers, name)}
+                />
               ))}
             </div>
           )}

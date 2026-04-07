@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
-import type { Filters, View, Talk } from "./types";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import type { Filters, View } from "./types";
 import { useSchedule } from "./hooks/useSchedule";
 import { useFavorites } from "./hooks/useFavorites";
+import { FAVORITES_KEY } from "./constants";
 import { Header } from "./components/layout/Header";
 import { FilterBar } from "./components/filters/FilterBar";
 import { ScheduleView } from "./components/schedule/ScheduleView";
@@ -12,9 +13,52 @@ const DEFAULT_FILTERS: Filters = { day: "All", type: "All", track: "All" };
 export default function App() {
   const [view, setView] = useState<View>("schedule");
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
-  const [selectedTalk, setSelectedTalk] = useState<Talk | null>(null);
-  const { sessions, speakers, loading, error } = useSchedule();
+  const [selectedTalkId, setSelectedTalkId] = useState<string | null>(null);
+  const { sessions, speakers, loading, error, reload } = useSchedule();
   const { favorites, isFavorite, toggle } = useFavorites();
+
+  // Resolve selected talk from current sessions (avoids stale reference)
+  const selectedTalk = useMemo(
+    () => (selectedTalkId ? sessions.find((s) => s.id === selectedTalkId) ?? null : null),
+    [selectedTalkId, sessions]
+  );
+
+  // Clean up ghost favorites whose sessions no longer exist in the API
+  useEffect(() => {
+    if (sessions.length === 0) return;
+    const validIds = new Set(sessions.map((s) => s.id));
+    const clean = favorites.filter((id) => validIds.has(id));
+    if (clean.length !== favorites.length) {
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(clean));
+    }
+  }, [sessions]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When switching to My Schedule, reset filters (they don't apply there)
+  const handleViewChange = useCallback(
+    (newView: View) => {
+      if (newView === "my-schedule") setFilters(DEFAULT_FILTERS);
+      setView(newView);
+    },
+    []
+  );
+
+  // Auto-reset track filter when it no longer exists in the selected day
+  const handleFilterChange = useCallback(
+    (newFilters: Filters) => {
+      if (newFilters.day !== filters.day && newFilters.track !== "All") {
+        const base =
+          newFilters.day !== "All"
+            ? sessions.filter((s) => s.day === newFilters.day)
+            : sessions;
+        const tracks = new Set(base.map((s) => s.track).filter(Boolean));
+        if (!tracks.has(newFilters.track)) {
+          newFilters = { ...newFilters, track: "All" };
+        }
+      }
+      setFilters(newFilters);
+    },
+    [filters.day, sessions]
+  );
 
   const filteredSessions = useMemo(() => {
     let result = sessions;
@@ -30,24 +74,36 @@ export default function App() {
   );
 
   const availableTracks = useMemo(() => {
-    const base = filters.day !== "All"
-      ? sessions.filter((s) => s.day === filters.day)
-      : sessions;
+    const base =
+      filters.day !== "All"
+        ? sessions.filter((s) => s.day === filters.day)
+        : sessions;
     const tracks = new Set(base.map((s) => s.track).filter((t): t is string => !!t));
     return [...tracks].sort();
   }, [sessions, filters.day]);
 
-  const displaySessions = view === "schedule" ? filteredSessions : myScheduleSessions;
+  const displaySessions =
+    view === "schedule" ? filteredSessions : myScheduleSessions;
+
+  const hasActiveFilters =
+    filters.day !== "All" || filters.type !== "All" || filters.track !== "All";
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      <Header view={view} onViewChange={setView} favoriteCount={favorites.length} />
+      <Header
+        view={view}
+        onViewChange={handleViewChange}
+        favoriteCount={favorites.length}
+      />
 
       {view === "schedule" && (
         <FilterBar
           filters={filters}
           availableTracks={availableTracks}
-          onChange={setFilters}
+          onChange={handleFilterChange}
+          onClear={() => setFilters(DEFAULT_FILTERS)}
+          hasActiveFilters={hasActiveFilters}
+          disabled={loading}
         />
       )}
 
@@ -55,15 +111,20 @@ export default function App() {
         {loading && (
           <div className="flex flex-col items-center justify-center py-20 text-slate-500">
             <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
-            <p>Loading schedule…</p>
+            <p className="text-sm">Loading schedule…</p>
           </div>
         )}
 
         {error && !loading && (
-          <div className="flex flex-col items-center justify-center py-20 text-red-400">
-            <span className="text-4xl mb-3">⚠️</span>
-            <p className="text-center">{error}</p>
-            <p className="text-sm text-slate-500 mt-2">Check your connection and refresh.</p>
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <span className="text-4xl">⚠️</span>
+            <p className="text-red-400 text-center text-sm">{error}</p>
+            <button
+              onClick={reload}
+              className="mt-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              Try again
+            </button>
           </div>
         )}
 
@@ -73,12 +134,14 @@ export default function App() {
             speakers={speakers}
             isFavorite={isFavorite}
             onToggle={toggle}
-            onSelect={setSelectedTalk}
+            onSelect={setSelectedTalkId}
             filterBarShown={view === "schedule"}
             emptyMessage={
               view === "my-schedule"
                 ? "No sessions saved yet. Star sessions in the Schedule view to add them here."
-                : "No sessions match your filters."
+                : hasActiveFilters
+                ? "No sessions match your filters. Try clearing some."
+                : "No sessions available."
             }
           />
         )}
@@ -90,7 +153,7 @@ export default function App() {
           speakers={speakers}
           isFavorite={isFavorite(selectedTalk.id)}
           onToggle={toggle}
-          onClose={() => setSelectedTalk(null)}
+          onClose={() => setSelectedTalkId(null)}
         />
       )}
     </div>

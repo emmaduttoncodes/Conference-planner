@@ -1,5 +1,6 @@
 import type { Talk, SpeakerMap } from "../../types";
 import { DAYS } from "../../constants";
+import { parseTimeToMinutes } from "../../lib/time";
 import { TimeSlotGroup } from "./TimeSlotGroup";
 
 interface ScheduleViewProps {
@@ -7,24 +8,32 @@ interface ScheduleViewProps {
   speakers: SpeakerMap;
   isFavorite: (id: string) => boolean;
   onToggle: (id: string) => void;
-  onSelect: (talk: Talk) => void;
+  onSelect: (id: string) => void;
   emptyMessage?: string;
   filterBarShown?: boolean;
 }
 
 const DAY_ORDER = Object.fromEntries(DAYS.map((d, i) => [d, i]));
 
-export function ScheduleView({ sessions, speakers, isFavorite, onToggle, onSelect, emptyMessage, filterBarShown = true }: ScheduleViewProps) {
+export function ScheduleView({
+  sessions,
+  speakers,
+  isFavorite,
+  onToggle,
+  onSelect,
+  emptyMessage,
+  filterBarShown = true,
+}: ScheduleViewProps) {
   if (sessions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-500">
         <span className="text-4xl mb-3">📅</span>
-        <p>{emptyMessage ?? "No sessions found."}</p>
+        <p className="text-sm">{emptyMessage ?? "No sessions found."}</p>
       </div>
     );
   }
 
-  // Group by day, then by time within each day
+  // Group by day → time
   const dayMap = new Map<string, Map<string, Talk[]>>();
   for (const session of sessions) {
     if (!dayMap.has(session.day)) dayMap.set(session.day, new Map());
@@ -33,7 +42,7 @@ export function ScheduleView({ sessions, speakers, isFavorite, onToggle, onSelec
     timeMap.get(session.time)!.push(session);
   }
 
-  // Sort days by conference order (April 8, 9, 10)
+  // Sort days by conference order
   const days = [...dayMap.keys()].sort(
     (a, b) => (DAY_ORDER[a] ?? 99) - (DAY_ORDER[b] ?? 99)
   );
@@ -43,11 +52,17 @@ export function ScheduleView({ sessions, speakers, isFavorite, onToggle, onSelec
     <div className="flex flex-col gap-4 py-4">
       {days.map((day) => {
         const timeMap = dayMap.get(day)!;
-        const times = [...timeMap.keys()].sort();
+        // Sort times numerically, not lexicographically
+        const times = [...timeMap.keys()].sort(
+          (a, b) => parseTimeToMinutes(a) - parseTimeToMinutes(b)
+        );
+
         return (
           <div key={day}>
             {multiDay && (
-              <div className={`sticky ${filterBarShown ? "top-[113px]" : "top-14"} z-10 -mx-4 px-4 py-2 mb-2 bg-slate-900/95 backdrop-blur border-b border-slate-800`}>
+              <div
+                className={`sticky ${filterBarShown ? "top-[113px]" : "top-14"} z-10 -mx-4 px-4 py-2 mb-2 bg-slate-900/95 backdrop-blur border-b border-slate-800`}
+              >
                 <span className="text-xs font-semibold uppercase tracking-widest text-indigo-400">
                   {day}
                 </span>
