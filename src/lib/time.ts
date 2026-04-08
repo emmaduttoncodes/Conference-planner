@@ -87,3 +87,27 @@ export function getTodayConferenceDay(): string | null {
   }
   return null;
 }
+
+/**
+ * Returns the best day to show on load:
+ * - The first conference day that still has at least one non-past session.
+ * - This naturally skips today if all its sessions are already done, advancing
+ *   to the next day.
+ * - Returns null if the conference is fully over.
+ */
+export function getBestConferenceDay(
+  sessions: Array<{ day: string; time: string }>,
+  now: Date
+): string | null {
+  const ORDERED_DAYS = ["April 8", "April 9", "April 10"];
+  for (const day of ORDERED_DAYS) {
+    const daySessions = sessions.filter((s) => s.day === day);
+    if (daySessions.length === 0) continue;
+    const hasUpcoming = daySessions.some((s) => {
+      const { endMinutes } = parseSessionRange(s.time);
+      return now < sessionToDate(day, endMinutes);
+    });
+    if (hasUpcoming) return day;
+  }
+  return null;
+}

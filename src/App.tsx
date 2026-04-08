@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import type { Filters, View } from "./types";
 import { useSchedule } from "./hooks/useSchedule";
 import { useSyncedFavorites } from "./hooks/useSyncedFavorites";
@@ -8,7 +8,7 @@ import { useProfile } from "./hooks/useProfile";
 import { useNow } from "./hooks/useNow";
 import { FAVORITES_KEY } from "./constants";
 import { readImportParam, clearImportParam } from "./lib/shareSchedule";
-import { getTodayConferenceDay } from "./lib/time";
+import { getTodayConferenceDay, getBestConferenceDay } from "./lib/time";
 import { Header } from "./components/layout/Header";
 import { FilterBar } from "./components/filters/FilterBar";
 import { ScheduleView } from "./components/schedule/ScheduleView";
@@ -38,11 +38,20 @@ export default function App() {
   const { profile, save: saveProfile, hasProfile } = useProfile();
   const now = useNow();
 
-  // Auto-select today's conference day on first load
+  // Phase 1: immediately filter to today so the filter bar looks right during loading
   useEffect(() => {
     const today = getTodayConferenceDay();
     if (today) setFilters((f) => ({ ...f, day: today as Filters["day"] }));
   }, []);
+
+  // Phase 2: once sessions load, advance to the next day if today is all done
+  const autoAdvancedRef = useRef(false);
+  useEffect(() => {
+    if (sessions.length === 0 || autoAdvancedRef.current) return;
+    autoAdvancedRef.current = true;
+    const best = getBestConferenceDay(sessions, new Date());
+    if (best) setFilters((f) => ({ ...f, day: best as Filters["day"] }));
+  }, [sessions]);
 
   // Detect shared schedule in URL on mount
   useEffect(() => {
