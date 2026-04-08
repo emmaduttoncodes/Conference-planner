@@ -12,6 +12,7 @@ interface SessionCardProps {
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
   friendsAttending?: Friend[];
+  isPast?: boolean;
 }
 
 export function SessionCard({
@@ -21,6 +22,7 @@ export function SessionCard({
   onToggle,
   onSelect,
   friendsAttending = [],
+  isPast = false,
 }: SessionCardProps) {
   const isBreak = talk.type === "break";
   const typeColor = TYPE_COLORS[talk.type] ?? "bg-slate-100 text-slate-600 dark:bg-slate-200 dark:text-slate-700";
@@ -89,7 +91,7 @@ export function SessionCard({
         </p>
 
         {/* Title */}
-        <p className={`font-semibold leading-snug ${isBreak ? "text-slate-400 dark:text-slate-500" : "text-slate-900 dark:text-white"}`}>
+        <p className={`font-semibold leading-snug ${isBreak ? "text-slate-400 dark:text-slate-500" : "text-slate-900 dark:text-white"} ${isPast ? "line-through decoration-slate-400/60" : ""}`}>
           {talk.title}
         </p>
 

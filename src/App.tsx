@@ -5,8 +5,10 @@ import { useSyncedFavorites } from "./hooks/useSyncedFavorites";
 import { useFriends } from "./hooks/useFriends";
 import { useTheme } from "./hooks/useTheme";
 import { useProfile } from "./hooks/useProfile";
+import { useNow } from "./hooks/useNow";
 import { FAVORITES_KEY } from "./constants";
 import { readImportParam, clearImportParam } from "./lib/shareSchedule";
+import { getTodayConferenceDay } from "./lib/time";
 import { Header } from "./components/layout/Header";
 import { FilterBar } from "./components/filters/FilterBar";
 import { ScheduleView } from "./components/schedule/ScheduleView";
@@ -34,6 +36,13 @@ export default function App() {
   const { friends, friendsForSession, addFriend, removeFriend } = useFriends();
   const { theme, toggle: toggleTheme } = useTheme();
   const { profile, save: saveProfile, hasProfile } = useProfile();
+  const now = useNow();
+
+  // Auto-select today's conference day on first load
+  useEffect(() => {
+    const today = getTodayConferenceDay();
+    if (today) setFilters((f) => ({ ...f, day: today as Filters["day"] }));
+  }, []);
 
   // Detect shared schedule in URL on mount
   useEffect(() => {
@@ -190,6 +199,7 @@ export default function App() {
             onSelect={setSelectedTalkId}
             filterBarShown={view === "schedule"}
             friendsForSession={friendsForSession}
+            now={now}
             emptyMessage={
               view === "my-schedule"
                 ? "No sessions saved yet. Star sessions in the Schedule view to add them here."
