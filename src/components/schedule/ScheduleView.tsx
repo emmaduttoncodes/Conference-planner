@@ -66,7 +66,7 @@ export function ScheduleView({
   for (const session of sessions) {
     if (!dayMap.has(session.day)) dayMap.set(session.day, new Map());
     const timeMap = dayMap.get(session.day)!;
-    const startKey = session.time.split("-")[0].trim(); // e.g. "12:00"
+    const startKey = session.time.split("-")[0].trim().replace(/[ap]m$/i, "").trim(); // e.g. "12:00"
     if (!timeMap.has(startKey)) timeMap.set(startKey, []);
     timeMap.get(startKey)!.push(session);
   }
