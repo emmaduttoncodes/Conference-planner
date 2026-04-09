@@ -6,22 +6,44 @@ interface CacheEntry<T> {
   fetchedAt: number;
 }
 
-// ai.engineer blocks CORS for non-whitelisted origins; route through a proxy as fallback
-const CORS_PROXY = "https://corsproxy.io/?";
+// ai.engineer blocks CORS for non-whitelisted origins; route through proxies as fallback
+const CORS_PROXIES = [
+  "https://corsproxy.io/?",
+  "https://api.allorigins.win/raw?url=",
+];
+
+const FETCH_TIMEOUT_MS = 10_000;
+
+function fetchWithTimeout(url: string, options?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() =>
+    clearTimeout(timeoutId)
+  );
+}
 
 async function fetchJson<T>(url: string): Promise<T> {
   // Try direct first (works if CORS headers are present)
   try {
-    const res = await fetch(url, { mode: "cors" });
+    const res = await fetchWithTimeout(url, { mode: "cors" });
     if (res.ok) return res.json() as Promise<T>;
   } catch {
-    // CORS or network error — fall through to proxy
+    // CORS or network error — fall through to proxies
   }
 
-  // Fallback: CORS proxy
-  const res = await fetch(`${CORS_PROXY}${encodeURIComponent(url)}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
-  return res.json() as Promise<T>;
+  // Try each CORS proxy in sequence
+  let lastError: Error | undefined;
+  for (const proxy of CORS_PROXIES) {
+    try {
+      const res = await fetchWithTimeout(`${proxy}${encodeURIComponent(url)}`);
+      if (res.ok) return res.json() as Promise<T>;
+      lastError = new Error(`HTTP ${res.status} fetching ${url}`);
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error("Network error");
+    }
+  }
+
+  throw lastError ?? new Error(`Failed to fetch ${url}`);
 }
 
 async function fetchWithCache<T>(url: string, cacheKey: string): Promise<T> {
