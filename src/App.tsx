@@ -19,7 +19,7 @@ import { CompareModal } from "./components/schedule/CompareModal";
 import { ProfileModal } from "./components/profile/ProfileModal";
 import { SyncModal } from "./components/sync/SyncModal";
 
-const DEFAULT_FILTERS: Filters = { day: "All", type: "All", track: "All" };
+const DEFAULT_FILTERS: Filters = { day: "All", type: "All", track: "All", room: "All" };
 
 export default function App() {
   const [view, setView] = useState<View>("schedule");
@@ -118,6 +118,7 @@ export default function App() {
     if (filters.day !== "All") result = result.filter((s) => s.day === filters.day);
     if (filters.type !== "All") result = result.filter((s) => s.type === filters.type);
     if (filters.track !== "All") result = result.filter((s) => s.track === filters.track);
+    if (filters.room !== "All") result = result.filter((s) => s.room === filters.room);
     return result;
   }, [sessions, filters]);
 
@@ -135,11 +136,20 @@ export default function App() {
     return [...tracks].sort();
   }, [sessions, filters.day]);
 
+  const availableRooms = useMemo(() => {
+    const base =
+      filters.day !== "All"
+        ? sessions.filter((s) => s.day === filters.day)
+        : sessions;
+    const rooms = new Set(base.map((s) => s.room).filter(Boolean));
+    return [...rooms].sort();
+  }, [sessions, filters.day]);
+
   const displaySessions =
     view === "schedule" ? filteredSessions : myScheduleSessions;
 
   const hasActiveFilters =
-    filters.day !== "All" || filters.type !== "All" || filters.track !== "All";
+    filters.day !== "All" || filters.type !== "All" || filters.track !== "All" || filters.room !== "All";
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white">
@@ -160,6 +170,7 @@ export default function App() {
         <FilterBar
           filters={filters}
           availableTracks={availableTracks}
+          availableRooms={availableRooms}
           onChange={handleFilterChange}
           onClear={() => setFilters(DEFAULT_FILTERS)}
           hasActiveFilters={hasActiveFilters}

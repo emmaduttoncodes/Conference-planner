@@ -41,6 +41,7 @@ export interface Filters {
   day: Day | "All";
   type: SessionType | "All";
   track: string | "All";
+  room: string | "All";
 }
 
 export type View = "schedule" | "my-schedule";

@@ -4,6 +4,7 @@ import { DAYS, TYPE_LABELS } from "../../constants";
 interface FilterBarProps {
   filters: Filters;
   availableTracks: string[];
+  availableRooms: string[];
   onChange: (filters: Filters) => void;
   onClear: () => void;
   hasActiveFilters: boolean;
@@ -21,6 +22,7 @@ const SELECT_CLASS = [
 export function FilterBar({
   filters,
   availableTracks,
+  availableRooms,
   onChange,
   onClear,
   hasActiveFilters,
@@ -94,6 +96,29 @@ export function FilterBar({
                 {availableTracks.map((t) => (
                   <option key={t} value={t}>
                     {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {availableRooms.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                Room
+              </span>
+              <select
+                value={filters.room}
+                disabled={disabled}
+                onChange={(e) =>
+                  onChange({ ...filters, room: e.target.value })
+                }
+                className={`${SELECT_CLASS} max-w-[150px]`}
+              >
+                <option value="All">All rooms</option>
+                {availableRooms.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
                   </option>
                 ))}
               </select>
