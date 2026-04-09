@@ -21,10 +21,17 @@ interface ScheduleViewProps {
 
 const DAY_ORDER = Object.fromEntries(DAYS.map((d, i) => [d, i]));
 
-function getSlotStatus(day: string, time: string, now: Date): SlotStatus {
-  const { startMinutes, endMinutes } = parseSessionRange(time);
-  const start = sessionToDate(day, startMinutes);
-  const end = sessionToDate(day, endMinutes);
+/** Compute status for a slot using the earliest start and latest end across all its sessions. */
+function getSlotStatus(day: string, slotSessions: Talk[], now: Date): SlotStatus {
+  let earliestStart = Infinity;
+  let latestEnd = 0;
+  for (const s of slotSessions) {
+    const { startMinutes, endMinutes } = parseSessionRange(s.time);
+    if (startMinutes < earliestStart) earliestStart = startMinutes;
+    if (endMinutes > latestEnd) latestEnd = endMinutes;
+  }
+  const start = sessionToDate(day, earliestStart);
+  const end = sessionToDate(day, latestEnd);
   if (now >= end) return "past";
   if (now >= start) return "live";
   return "future"; // "next" assigned by caller
@@ -39,7 +46,6 @@ export function ScheduleView({
   // Scroll to the first live/next slot on mount
   useEffect(() => {
     if (!scrollTargetRef.current) return;
-    // Small delay so the layout has settled
     const id = setTimeout(() => {
       scrollTargetRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 150);
@@ -55,34 +61,35 @@ export function ScheduleView({
     );
   }
 
-  // Group by day → time
+  // Group by day → START TIME ONLY (so "12:00-12:10pm" and "12:00-12:20pm" share one row)
   const dayMap = new Map<string, Map<string, Talk[]>>();
   for (const session of sessions) {
     if (!dayMap.has(session.day)) dayMap.set(session.day, new Map());
     const timeMap = dayMap.get(session.day)!;
-    if (!timeMap.has(session.time)) timeMap.set(session.time, []);
-    timeMap.get(session.time)!.push(session);
+    const startKey = session.time.split("-")[0].trim(); // e.g. "12:00"
+    if (!timeMap.has(startKey)) timeMap.set(startKey, []);
+    timeMap.get(startKey)!.push(session);
   }
 
   const days = [...dayMap.keys()].sort((a, b) => (DAY_ORDER[a] ?? 99) - (DAY_ORDER[b] ?? 99));
   const multiDay = days.length > 1;
 
-  // Compute statuses for every (day, time) pair, then mark the single "next" slot
-  type SlotKey = string; // `${day}||${time}`
+  // Compute statuses, then mark the single "next" slot
+  type SlotKey = string; // `${day}||${startTime}`
   const statusMap = new Map<SlotKey, SlotStatus>();
   let nextAssigned = false;
 
   for (const day of days) {
     const timeMap = dayMap.get(day)!;
     const times = [...timeMap.keys()].sort((a, b) => parseTimeToMinutes(a) - parseTimeToMinutes(b));
-    for (const time of times) {
-      const raw = getSlotStatus(day, time, now);
+    for (const startTime of times) {
+      const raw = getSlotStatus(day, timeMap.get(startTime)!, now);
       const status: SlotStatus = (raw === "future" && !nextAssigned) ? (nextAssigned = true, "next") : raw;
-      statusMap.set(`${day}||${time}`, status);
+      statusMap.set(`${day}||${startTime}`, status);
     }
   }
 
-  // Find the first "live" or "next" slot key for scrolling
+  // Find the first "live" or "next" slot for scroll target
   let scrollTarget: SlotKey | null = null;
   for (const [key, status] of statusMap) {
     if (status === "live" || status === "next") { scrollTarget = key; break; }
@@ -104,8 +111,8 @@ export function ScheduleView({
               </div>
             )}
             <div className="flex flex-col gap-4">
-              {times.map((time) => {
-                const key = `${day}||${time}`;
+              {times.map((startTime) => {
+                const key = `${day}||${startTime}`;
                 const status = statusMap.get(key) ?? "future";
                 const isScrollTarget = key === scrollTarget;
                 return (
@@ -115,8 +122,8 @@ export function ScheduleView({
                     className={isScrollTarget ? "scroll-mt-[120px]" : undefined}
                   >
                     <TimeSlotGroup
-                      time={time}
-                      sessions={timeMap.get(time)!}
+                      time={startTime}
+                      sessions={timeMap.get(startTime)!}
                       speakers={speakers}
                       isFavorite={isFavorite}
                       onToggle={onToggle}
