@@ -21,6 +21,10 @@ export const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const SESSIONS_URL = "https://ai.engineer/europe/sessions.json";
 export const SPEAKERS_URL = "https://ai.engineer/europe/speakers.json";
 
+// Same-origin copies fetched at build time — no CORS, no proxy required
+export const LOCAL_SESSIONS_URL = `${import.meta.env.BASE_URL}data/sessions.json`;
+export const LOCAL_SPEAKERS_URL = `${import.meta.env.BASE_URL}data/speakers.json`;
+
 export const TBD_REGEX = /^tbd\b/i;
 
 // Human-readable labels for session types
