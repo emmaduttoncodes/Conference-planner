@@ -1,4 +1,8 @@
-import { SESSIONS_URL, SPEAKERS_URL, SESSIONS_CACHE_KEY, SPEAKERS_CACHE_KEY, CACHE_TTL_MS } from "../constants";
+import {
+  SESSIONS_URL, SPEAKERS_URL,
+  LOCAL_SESSIONS_URL, LOCAL_SPEAKERS_URL,
+  SESSIONS_CACHE_KEY, SPEAKERS_CACHE_KEY, CACHE_TTL_MS,
+} from "../constants";
 import type { RawTalk, RawSpeaker, SessionsResponse, SpeakersResponse } from "./normalize";
 
 interface CacheEntry<T> {
@@ -22,31 +26,40 @@ function fetchWithTimeout(url: string, options?: RequestInit): Promise<Response>
   );
 }
 
-async function fetchJson<T>(url: string): Promise<T> {
-  // Try direct first (works if CORS headers are present)
+async function fetchJson<T>(localUrl: string, remoteUrl: string): Promise<T> {
+  // 1. Try the same-origin copy baked in at build time — no CORS, unaffected by
+  //    VPNs or DNS filters that might block third-party proxy domains.
   try {
-    const res = await fetchWithTimeout(url, { mode: "cors" });
+    const res = await fetchWithTimeout(localUrl);
+    if (res.ok) return res.json() as Promise<T>;
+  } catch {
+    // local copy missing (first deploy before workflow runs) — fall through
+  }
+
+  // 2. Try direct (works if ai.engineer ever adds CORS headers)
+  try {
+    const res = await fetchWithTimeout(remoteUrl, { mode: "cors" });
     if (res.ok) return res.json() as Promise<T>;
   } catch {
     // CORS or network error — fall through to proxies
   }
 
-  // Try each CORS proxy in sequence
+  // 3. Try each CORS proxy in sequence
   let lastError: Error | undefined;
   for (const proxy of CORS_PROXIES) {
     try {
-      const res = await fetchWithTimeout(`${proxy}${encodeURIComponent(url)}`);
+      const res = await fetchWithTimeout(`${proxy}${encodeURIComponent(remoteUrl)}`);
       if (res.ok) return res.json() as Promise<T>;
-      lastError = new Error(`HTTP ${res.status} fetching ${url}`);
+      lastError = new Error(`HTTP ${res.status} fetching ${remoteUrl}`);
     } catch (e) {
       lastError = e instanceof Error ? e : new Error("Network error");
     }
   }
 
-  throw lastError ?? new Error(`Failed to fetch ${url}`);
+  throw lastError ?? new Error(`Failed to fetch ${remoteUrl}`);
 }
 
-async function fetchWithCache<T>(url: string, cacheKey: string): Promise<T> {
+async function fetchWithCache<T>(localUrl: string, remoteUrl: string, cacheKey: string): Promise<T> {
   const cached = localStorage.getItem(cacheKey);
   if (cached) {
     try {
@@ -59,7 +72,7 @@ async function fetchWithCache<T>(url: string, cacheKey: string): Promise<T> {
     }
   }
 
-  const data = await fetchJson<T>(url);
+  const data = await fetchJson<T>(localUrl, remoteUrl);
   try {
     localStorage.setItem(cacheKey, JSON.stringify({ data, fetchedAt: Date.now() }));
   } catch {
@@ -69,11 +82,11 @@ async function fetchWithCache<T>(url: string, cacheKey: string): Promise<T> {
 }
 
 export const fetchSessions = async (): Promise<RawTalk[]> => {
-  const envelope = await fetchWithCache<SessionsResponse>(SESSIONS_URL, SESSIONS_CACHE_KEY);
+  const envelope = await fetchWithCache<SessionsResponse>(LOCAL_SESSIONS_URL, SESSIONS_URL, SESSIONS_CACHE_KEY);
   return envelope.sessions ?? [];
 };
 
 export const fetchSpeakers = async (): Promise<RawSpeaker[]> => {
-  const envelope = await fetchWithCache<SpeakersResponse>(SPEAKERS_URL, SPEAKERS_CACHE_KEY);
+  const envelope = await fetchWithCache<SpeakersResponse>(LOCAL_SPEAKERS_URL, SPEAKERS_URL, SPEAKERS_CACHE_KEY);
   return envelope.speakers ?? [];
 };
