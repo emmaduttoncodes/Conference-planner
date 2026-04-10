@@ -3,6 +3,11 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [master]
+  schedule:
+    # Refresh every 4 hours so schedule changes on ai.engineer propagate
+    # without needing a code push
+    - cron: "0 */4 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -26,8 +31,12 @@ jobs:
       - name: Fetch schedule data (server-side, no CORS needed)
         run: |
           mkdir -p public/data
-          curl -fsSL https://ai.engineer/europe/sessions.json -o public/data/sessions.json || true
-          curl -fsSL https://ai.engineer/europe/speakers.json -o public/data/speakers.json || true
+          # Use a real browser User-Agent so Cloudflare / bot-protection lets the request through.
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+          curl -fsSL -A "$UA" -H "Accept: application/json" \
+            https://ai.engineer/europe/sessions.json -o public/data/sessions.json || true
+          curl -fsSL -A "$UA" -H "Accept: application/json" \
+            https://ai.engineer/europe/speakers.json -o public/data/speakers.json || true
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
